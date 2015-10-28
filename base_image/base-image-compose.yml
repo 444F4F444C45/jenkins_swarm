@@ -1,0 +1,5 @@
+jenkins-jailbroken:
+    build: .
+    environment:
+    volumes:
+        - /var/jenkins_home

@@ -1,9 +1,21 @@
-master:
-  build: .
-  environment:
-    JAVA_OPTS: "-Djava.awt.headless=true"
-  ports:
-    - "50000:50000"
-    - "8080:8080"
-  volumes:
-    - /var/jenkins_home
+jenkins-jailbroken-master:
+    extends: 
+        file: base_image/base-image-compose.yml
+        service: jenkins-jailbroken
+    environment:
+    ports:
+        - "8193:8080"
+jenkins-jailbroken-slave1:
+    extends: 
+        file: base_image/base-image-compose.yml
+        service: jenkins-jailbroken
+    environment:
+    ports:
+        - "8194:8080"
+jenkins-jailbroken-slave2:
+    extends: 
+        file: base_image/base-image-compose.yml
+        service: jenkins-jailbroken
+    environment:
+    ports:
+        - "8195:8080"

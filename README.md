@@ -1,4 +1,5 @@
-# Official Jenkins Docker image
+# Derived from _Official Jenkins Docker image_
+Derivation Date: 10-27-2015
 
 The Jenkins Continuous Integration and Delivery server.
 
@@ -11,25 +12,33 @@ http://jenkins-ci.org/
 
 # Usage
 
+This will fire up a quick jenkins instance that is good for adhoc testing. The data fed to jenkins in this case, will 
+not persist across runtimes.  Think volatile memory!
 ```
-docker run -p 8080:8080 -p 50000:50000 jenkins
+docker run -p 8080:8192 -p 50000:58192 jenkins
+
+or 
+
+docker run -p 8080:8080 -p 50000:58192 jenkins
 ```
 
 This will store the workspace in /var/jenkins_home. All Jenkins data lives in there - including plugins and configuration.
 You will probably want to make that a persistent volume (recommended):
 
 ```
-docker run -p 8080:8080 -p 50000:50000 -v /your/home:/var/jenkins_home jenkins
+docker run -p 8080:8192 -p 50000:58192 -v /your/home:/var/jenkins_home jenkins
 ```
 
 This will store the jenkins data in `/your/home` on the host.
-Ensure that `/your/home` is accessible by the jenkins user in container (jenkins user - uid 1000) or use `-u some_other_user` parameter with `docker run`.
+Ensure that `/your/home` is accessible by the jenkins user in container (jenkins-jailbroken user - uid 1000) or use `-u some_other_user` parameter with `docker run`.
 
 
+**_Reocmmended for production deployments that do not have access to a host environment volume but need data to persist
+accross runtimes._**
 You can also use a volume container:
 
 ```
-docker run --name myjenkins -p 8080:8080 -p 50000:50000 -v /var/jenkins_home jenkins
+docker run --name myjenkins -p 8080:8080 -p 50000:58192 -v /var/jenkins_home jenkins-jailbroken
 ```
 
 Then myjenkins container has the volume (please do read about docker volume handling to find out more).
@@ -59,14 +68,14 @@ Jenkins.instance.setNumExecutors(5)
 and `Dockerfile`
 
 ```
-FROM jenkins
+FROM jenkins-jailbroken
 COPY executors.groovy /usr/share/jenkins/ref/init.groovy.d/executors.groovy
 ```
 
 
 # Attaching build executors
 
-You can run builds on the master (out of the box) but if you want to attach build slave servers: make sure you map the port: ```-p 50000:50000``` - which will be used when you connect a slave agent.
+You can run builds on the master (out of the box) but if you want to attach build slave servers: make sure you map the port: ```-p 50000:58192``` - which will be used when you connect a slave agent.
 
 # Passing JVM parameters
 
@@ -74,7 +83,7 @@ You might need to customize the JVM running Jenkins, typically to pass system pr
 variable for this purpose :
 
 ```
-docker run --name myjenkins -p 8080:8080 -p 50000:50000 --env JAVA_OPTS=-Dhudson.footerURL=http://mycompany.com jenkins
+docker run --name myjenkins -p 8080:8192 -p 50000:58192 --env JAVA_OPTS=-Dhudson.footerURL=http://mycompany.com jenkins-jailbroken
 ```
 
 # Configuring logging
@@ -89,7 +98,7 @@ handlers=java.util.logging.ConsoleHandler
 jenkins.level=FINEST
 java.util.logging.ConsoleHandler.level=FINEST
 EOF
-docker run --name myjenkins -p 8080:8080 -p 50000:50000 --env JAVA_OPTS="-Djava.util.logging.config.file=/var/jenkins_home/log.properties" -v `pwd`/data:/var/jenkins_home jenkins
+docker run --name myjenkins -p 8080:8192 -p 50000:58192 --env JAVA_OPTS="-Djava.util.logging.config.file=/var/jenkins_home/log.properties" -v `pwd`/data:/var/jenkins_home jenkins
 ```
 
 
@@ -97,7 +106,7 @@ docker run --name myjenkins -p 8080:8080 -p 50000:50000 --env JAVA_OPTS="-Djava.
 
 Argument you pass to docker running the jenkins image are passed to jenkins launcher, so you can run for sample :
 ```
-docker run jenkins --version
+docker run jenkins-jailbroken --version
 ```
 This will dump Jenkins version, just like when you run jenkins as an executable war.
 
@@ -117,12 +126,12 @@ EXPOSE 8083
 You can also change the default slave agent port for jenkins by defining `JENKINS_SLAVE_AGENT_PORT` in a sample Dockerfile.
 
 ```
-FROM jenkins:1.565.3
+FROM jenkins:1.625.1
 ENV JENKINS_SLAVE_AGENT_PORT 50001
 ```
 or as a parameter to docker,
 ```
-docker run --name myjenkins -p 8080:8080 -p 50001:50001 --env JENKINS_SLAVE_AGENT_PORT=50001 jenkins
+docker run --name myjenkins -p 8080:8080 -p 50001:50001 --env JENKINS_SLAVE_AGENT_PORT=50001 jenkins-jailbroken
 ```
 
 # Installing more tools
@@ -130,11 +139,11 @@ docker run --name myjenkins -p 8080:8080 -p 50001:50001 --env JENKINS_SLAVE_AGEN
 You can run your container as root - and install via apt-get, install as part of build steps via jenkins tool installers, or you can create your own Dockerfile to customise, for example: 
 
 ```
-FROM jenkins
+FROM jenkins-jailbroken
 # if we want to install via apt
 USER root
 RUN apt-get update && apt-get install -y ruby make more-thing-here
-USER jenkins # drop back to the regular jenkins user - good practice
+USER jenkins-jailbroken # drop back to the regular jenkins-jailbroken user - good practice
 ```
 
 In such a derived image, you can customize your jenkins instance with hook scripts or additional plugins. 
@@ -142,7 +151,7 @@ For this purpose, use `/usr/share/jenkins/ref` as a place to define the default 
 wish the target installation to look like :
 
 ```
-FROM jenkins
+FROM jenkins-jailbroken
 COPY plugins.txt /usr/share/jenkins/ref/
 COPY custom.groovy /usr/share/jenkins/ref/init.groovy.d/custom.groovy
 RUN /usr/local/bin/plugins.sh /usr/share/jenkins/ref/plugins.txt
@@ -168,7 +177,7 @@ maven-plugin:2.7.1
 And in derived Dockerfile just invoke the utility plugin.sh script
 
 ```
-FROM jenkins
+FROM jenkins-jailbroken
 COPY plugins.txt /usr/share/jenkins/plugins.txt
 RUN /usr/local/bin/plugins.sh /usr/share/jenkins/plugins.txt
 ```
@@ -183,3 +192,4 @@ As always - please ensure that you know how to drive docker - especially volume 
 # Questions?
 
 Jump on irc.freenode.net and the #jenkins room. Ask!
+
